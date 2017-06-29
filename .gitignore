@@ -1,0 +1,5 @@
+.vscode/
+libtcodpy/
+__pycache__/
+*.pyc
+*.dll
