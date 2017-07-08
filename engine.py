@@ -1,12 +1,10 @@
-try:
-    import libtcodpy as libtcod
-except ImportError:
-    import tcod as libtcod
+import tdl
 
 from entity import Entity
-from map_objects.game_map import GameMap
 from input_handlers import handle_keys
-from render_functions import render_all, clear_all
+from map_utils import make_map
+from render_functions import clear_all, render_all
+
 
 def main():
     screen_width = 80
@@ -15,52 +13,55 @@ def main():
     map_height = 45
 
     colors = {
-        'dark_wall': libtcod.Color(0, 0, 100),
-        'dark_ground': libtcod.Color(50, 50, 150)
+        'dark_wall': (0, 0, 100),
+        'dark_ground': (50, 50, 150)
     }
 
-    player = Entity(screen_width // 2, screen_height // 2, '@', libtcod.white)
-    npc = Entity((screen_width // 2) - 5, (screen_height // 2) - 5, '@', libtcod.yellow)
+    player = Entity(screen_width // 2, screen_height // 2, '@', (255, 255, 255))
+    npc = Entity((screen_width // 2) - 5, (screen_height // 2) - 5, '@', (255, 255, 0))
     entities = [npc, player]
 
-    libtcod.console_set_custom_font('arial10x10.png',
-                                    libtcod.FONT_TYPE_GREYSCALE |
-                                    libtcod.FONT_LAYOUT_TCOD)
-    libtcod.console_init_root(screen_width, screen_height,
-                              'libtcod tutorial revised',
-                              False)
+    tdl.set_font('arial10x10.png', greyscale=True, altLayout=True)
 
-    con = libtcod.console_new(screen_width, screen_height)
+    root_console = tdl.init(screen_width, screen_height,
+                            title='Roguelike Tutorial Revised')
+    con = tdl.Console(screen_width, screen_height)
 
-    game_map = GameMap(map_width, map_height)
+    game_map = tdl.map.Map(map_width, map_height)
+    make_map(game_map)
 
-    key = libtcod.Key()
-    mouse = libtcod.Mouse()
-
-    while not libtcod.console_is_window_closed():
-        libtcod.sys_check_for_event(libtcod.EVENT_KEY_PRESS, key, mouse)
-
-        render_all(con, entities, game_map, screen_width, screen_height, colors)
-        libtcod.console_flush()
+    while not tdl.event.is_window_closed():
+        render_all(con, entities, game_map, root_console, screen_width, screen_height, colors)
+        tdl.flush()
 
         clear_all(con, entities)
 
-        action = handle_keys(key)
+        for event in tdl.event.get():
+            if event.type == 'KEYDOWN':
+                user_input = event
+                break
+        else:
+            user_input = None
+
+        if not user_input:
+            continue
+
+        action = handle_keys(user_input)
 
         move = action.get('move')
-        _exit = action.get('exit')
+        exeunt = action.get('exit')
         fullscreen = action.get('fullscreen')
 
         if move:
             dx, dy = move
-            if not game_map.is_blocked(player.x + dx, player.y + dy):
+            if game_map.walkable[player.x + dx, player.y + dy]:
                 player.move(dx, dy)
 
-        if _exit:
+        if exeunt:
             return True
 
         if fullscreen:
-            libtcod.console_set_fullscreen(not libtcod.console_is_fullscreen())
+            tdl.set_fullscreen(not tdl.get_fullscreen())
 
 
 if __name__ == '__main__':
